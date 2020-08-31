@@ -6,6 +6,7 @@ edition = "2018"
 
 [features]
 js_v8 = ["rusty_v8"]
+js_wasm = []
 
 [dependencies]
 rusty_v8 = { version = "0.9.1", optional = true }
