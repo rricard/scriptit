@@ -1,7 +1,7 @@
 {
     // # Rust Analyzer
     // If you need to work on js_wasm, uncomment the next line
-    "rust-analyzer.cargo.target": "wasm32-unknown-unknown",
+    // "rust-analyzer.cargo.target": "wasm32-unknown-unknown",
 
     // # Formatting
     "editor.formatOnSave": true,
