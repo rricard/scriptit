@@ -4,9 +4,14 @@ version = "0.1.0"
 authors = ["Robin Ricard <git@rricard.me>"]
 edition = "2018"
 
-[features]
-js_v8 = ["rusty_v8"]
-js_wasm = []
+[lib]
+crate-type = ["cdylib", "rlib"]
 
-[dependencies]
-rusty_v8 = { version = "0.9.1", optional = true }
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+rusty_v8 = "0.9.1"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2.67"
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3.17"
