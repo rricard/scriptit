@@ -10,6 +10,6 @@ jobs:
         steps:
             - uses: actions/checkout@v2
             - name: build (js_v8)
-              run: cargo build --verbose --features "js_v8"
+              run: cargo build --verbose
             - name: test (js_v8)
-              run: cargo test --verbose  --features "js_v8"
+              run: cargo test --verbose
