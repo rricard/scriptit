@@ -3,6 +3,11 @@ name = "scriptit"
 version = "0.1.0"
 authors = ["Robin Ricard <git@rricard.me>"]
 edition = "2018"
+description = "scriptit is a simple way to run JavaScript code in Rust (native+wasm)"
+readme = "README.md"
+repository = "https://github.com/rricard/scriptit/"
+license = "MIT"
+keywords = [ "scripting", "javascript", "wasm", "v8" ]
 
 [lib]
 crate-type = ["cdylib", "rlib"]
