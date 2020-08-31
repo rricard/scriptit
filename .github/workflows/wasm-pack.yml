@@ -1,0 +1,17 @@
+name: wasm-pack build & test
+on:
+    push:
+        branches: [master]
+    pull_request:
+        branches: [master]
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+            - name: wasm-pack install
+              run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+            - name: build
+              run: wasm-pack build
+            - name: test (node)
+              run: wasm-pack test --node
