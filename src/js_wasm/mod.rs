@@ -49,12 +49,20 @@ fn jsvalue_to_scripterror(error: Error) -> ScriptError {
     ScriptError::RuntimeError(error.message())
 }
 
+/// A mocked environment that just proxies to the host
 pub struct ScriptingEnvironment;
 
 impl ScriptingEnvironment {
     pub fn new() -> ScriptingEnvironment {
         ScriptingEnvironment
     }
+
+    /// Evaluates some JS in the host
+    ///
+    /// This will invoke the JS `eval()` function in the same context as the
+    /// wasm host invocation.
+    ///
+    /// **Do not assume isolation from the host.**
     pub fn eval(&mut self, source: &str) -> Result<ScriptValue, ScriptError> {
         match eval(source) {
             Ok(value) => jsvalue_to_scriptvalue(value),

@@ -71,6 +71,7 @@ fn val_to_scriptvalue(
     })
 }
 
+/// A V8 scripting environment. This API also exists on WASM but JS will execute insecurely there.
 pub struct ScriptingEnvironment {
     isolate: v8::OwnedIsolate,
     global_context: v8::Global<v8::Context>,
@@ -93,6 +94,7 @@ impl ScriptingEnvironment {
         }
     }
 
+    /// Evaluates some JS in the current environment
     pub fn eval(&mut self, source: &str) -> Result<ScriptValue, ScriptError> {
         let scope = &mut v8::HandleScope::with_context(&mut self.isolate, &self.global_context);
         let source = v8::String::new(scope, source).ok_or(ScriptError::CastError {

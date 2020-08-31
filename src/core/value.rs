@@ -1,3 +1,4 @@
+/// Represents a JS Value in the target platform
 #[derive(Debug, PartialEq)]
 pub enum ScriptValue {
     String(String),

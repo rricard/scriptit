@@ -1,10 +1,14 @@
+/// Represents an error from the platform
 #[derive(Debug)]
 pub enum ScriptError {
+    /// Casting error, usually comes from scriptit
     CastError {
         type_from: &'static str,
         type_to: &'static str,
     },
+    /// Error that happens during the compile phase (**V8-only**)
     CompileError(String),
+    /// Error that happens while running the code
     RuntimeError(String),
 }
 
