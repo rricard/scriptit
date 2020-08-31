@@ -38,15 +38,35 @@ fn trycatch_scope_to_scripterror(
 }
 
 fn val_to_scriptvalue(
-    scope: &mut v8::HandleScope<()>,
+    scope: &mut v8::HandleScope,
     value: &v8::Local<v8::Value>,
 ) -> Result<ScriptValue, ScriptError> {
     if value.is_boolean() {
         return Ok(ScriptValue::Boolean(value.boolean_value(scope)));
     }
+    if value.is_string() {
+        let value = value.to_string(scope).ok_or(ScriptError::CastError {
+            type_from: "v8::Value",
+            type_to: "v8::String",
+        })?;
+        return Ok(ScriptValue::String(value.to_rust_string_lossy(scope)));
+    }
+    if value.is_number() {
+        let value = value.number_value(scope).ok_or(ScriptError::CastError {
+            type_from: "v8::Value",
+            type_to: "f64",
+        })?;
+        return Ok(ScriptValue::Number(value));
+    }
+    if value.is_null() {
+        return Ok(ScriptValue::Null);
+    }
+    if value.is_undefined() {
+        return Ok(ScriptValue::Undefined);
+    }
 
     Err(ScriptError::CastError {
-        type_from: "v8::Value",
+        type_from: "v8::Value (probably object)",
         type_to: "ScriptValue",
     })
 }
