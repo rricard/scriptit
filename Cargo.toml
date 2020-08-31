@@ -4,6 +4,8 @@ version = "0.1.0"
 authors = ["Robin Ricard <git@rricard.me>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+js_v8 = ["rusty_v8"]
 
 [dependencies]
+rusty_v8 = { version = "0.9.1", optional = true }
