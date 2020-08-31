@@ -1,0 +1,15 @@
+name: cargo build & test (js_v8)
+on:
+    push:
+        branches: [master]
+    pull_request:
+        branches: [master]
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+            - name: build (js_v8)
+              run: cargo build --verbose --features "js_v8"
+            - name: test (js_v8)
+              run: cargo test --verbose  --features "js_v8"
