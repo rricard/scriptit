@@ -1,0 +1,12 @@
+{
+    // # Rust Analyzer
+    // If you need to work on js_wasm,
+    // you can temporarily change this to js_wasm:
+    "rust-analyzer.cargo.features": ["js_v8"],
+
+    // # Formatting
+    "editor.formatOnSave": true,
+    "[rust]": {
+        "editor.defaultFormatter": "matklad.rust-analyzer"
+    }
+}
