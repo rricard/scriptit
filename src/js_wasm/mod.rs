@@ -1,15 +1,34 @@
 use crate::core::{error::ScriptError, value::ScriptValue};
+use std::sync::Once;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 extern "C" {
-    #[wasm_bindgen(catch)]
-    fn eval(s: &str) -> Result<JsValue, Error>;
+    #[wasm_bindgen(js_name = eval, catch)]
+    fn bootstrap_eval(s: &str) -> Result<JsValue, Error>;
 
     type Error;
 
     #[wasm_bindgen(method, getter)]
     fn message(this: &Error) -> String;
+
+    type JSScriptingEnvironment;
+
+    #[wasm_bindgen(constructor)]
+    fn new() -> JSScriptingEnvironment;
+
+    #[wasm_bindgen(method, catch)]
+    fn eval(this: &JSScriptingEnvironment, s: &str) -> Result<JsValue, Error>;
+}
+
+static JS_BOOTSTRAP: Once = Once::new();
+
+fn ensure_js_bootstrap() {
+    JS_BOOTSTRAP.call_once(|| {
+        bootstrap_eval(include_str!("./wasm_bootstrap.js"))
+            .map_err(|e| e.message())
+            .unwrap();
+    });
 }
 
 fn jsvalue_to_scriptvalue(value: JsValue) -> Result<ScriptValue, ScriptError> {
@@ -50,21 +69,17 @@ fn jsvalue_to_scripterror(error: Error) -> ScriptError {
 }
 
 /// A mocked environment that just proxies to the host
-pub struct ScriptingEnvironment;
+pub struct ScriptingEnvironment(JSScriptingEnvironment);
 
 impl ScriptingEnvironment {
     pub fn new() -> ScriptingEnvironment {
-        ScriptingEnvironment
+        ensure_js_bootstrap();
+        ScriptingEnvironment(JSScriptingEnvironment::new())
     }
 
     /// Evaluates some JS in the host
-    ///
-    /// This will invoke the JS `eval()` function in the same context as the
-    /// wasm host invocation.
-    ///
-    /// **Do not assume isolation from the host.**
     pub fn eval(&mut self, source: &str) -> Result<ScriptValue, ScriptError> {
-        match eval(source) {
+        match self.0.eval(source) {
             Ok(value) => jsvalue_to_scriptvalue(value),
             Err(value) => Err(jsvalue_to_scripterror(value)),
         }
