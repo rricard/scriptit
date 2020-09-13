@@ -19,8 +19,6 @@ Additionally I want to write most of my rust apps with a possible wasm target: a
 
 Due to those goals, scriptit will not give you the same amount of control that you would have embedding v8 yourself and will give you worst ergonomics than just using wasm_bindgen. It is unfortunately ruled by the lowest common denominators on both apis (v8 & wasm_bindgen).
 
-⚠️⚠️⚠️ **WASM scripting uses eval** ⚠️⚠️⚠️ I intend to change it soon but for now, please be extra careful!
-
 ## Example
 
 ```rust

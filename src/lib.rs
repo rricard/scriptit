@@ -12,12 +12,12 @@
 //!
 //! let mut s_env = ScriptingEnvironment::new();
 //!
-//! let src = "
+//! let src = "(function() {
 //!     const greeter = 'JS';
 //!     const greeted = 'Rust';
-//!     `Hello ${greeted}! (from ${greeter}...)`
-//! ";
-//! let res = s_env.eval(src).unwrap();
+//!     return `Hello ${greeted}! (from ${greeter}...)`;
+//! })()";
+//! let res = s_env.eval_expression(src).unwrap();
 //!
 //! assert_eq!(res, ScriptValue::String("Hello Rust! (from JS...)".to_string()));
 //! ```
