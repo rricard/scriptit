@@ -18,6 +18,9 @@ extern "C" {
     #[wasm_bindgen(constructor)]
     fn new() -> JSScriptingEnvironment;
 
+    #[wasm_bindgen(js_name = addToGlobal, method)]
+    fn add_to_global(this: &JSScriptingEnvironment, name: &str, func: JsValue);
+
     #[wasm_bindgen(method, catch)]
     fn compile(his: &JSScriptingEnvironment, s: &str) -> Result<CompiledFunction, Error>;
 
@@ -68,6 +71,14 @@ fn jsvalue_to_scriptvalue(value: JsValue) -> Result<ScriptValue, ScriptError> {
     })
 }
 
+fn scriptvalue_to_jsvalue(value: ScriptValue) -> JsValue {
+    match value {
+        ScriptValue::Number(n) => JsValue::from_f64(n),
+        ScriptValue::Null => JsValue::null(),
+        _ => JsValue::undefined(),
+    }
+}
+
 fn jsvalue_to_script_compile_error(error: Error) -> ScriptError {
     ScriptError::CompileError(error.message())
 }
@@ -83,6 +94,14 @@ impl ScriptingEnvironment {
     pub fn new() -> ScriptingEnvironment {
         ensure_js_bootstrap();
         ScriptingEnvironment(JSScriptingEnvironment::new())
+    }
+
+    pub fn register_fn(&mut self, name: &str, mut func: impl FnMut() + 'static) {
+        let closure = Box::new(move || {
+            func();
+        }) as Box<dyn FnMut()>;
+        self.0
+            .add_to_global(name, Closure::wrap(closure).into_js_value());
     }
 
     fn internal_eval(&mut self, source: &str) -> Result<ScriptValue, ScriptError> {

@@ -33,6 +33,14 @@ class JSScriptingEnvironment {
     }
 
     /**
+     * @param {string} name
+     * @param {any} value
+     */
+    addToGlobal(name, value) {
+        this.sandbox[name] = value;
+    }
+
+    /**
      * @param {string} stringSrc
      * @returns {(sandbox: Proxy<object, any>) => any}
      */
