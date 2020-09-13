@@ -5,8 +5,8 @@ use wasm_bindgen_test::*;
 
 #[test]
 #[wasm_bindgen_test]
-fn register_static_fn() {
-    let count: Rc<RefCell<u32>> = Rc::new(RefCell::new(0));
+fn register_count_fn() {
+    let count = Rc::new(RefCell::new(0 as u32));
     let closure_count = Rc::clone(&count);
 
     let mut s_env = ScriptingEnvironment::new();
