@@ -88,14 +88,16 @@ impl ScriptingEnvironment {
             // TODO: initialize the context here with our bindings
             global_context = v8::Global::new(scope, context);
         }
-        ScriptingEnvironment {
+        let mut se = ScriptingEnvironment {
             isolate,
             global_context,
-        }
+        };
+        se.run(include_str!("./v8_bootstrap.js")).unwrap();
+        se
     }
 
-    /// Evaluates some JS in the current environment
-    pub fn eval(&mut self, source: &str) -> Result<ScriptValue, ScriptError> {
+    /// Evaluates a single JS expression
+    pub fn eval_expression(&mut self, source: &str) -> Result<ScriptValue, ScriptError> {
         let scope = &mut v8::HandleScope::with_context(&mut self.isolate, &self.global_context);
         let source = v8::String::new(scope, source).ok_or(ScriptError::CastError {
             type_from: "&str",
@@ -117,5 +119,11 @@ impl ScriptingEnvironment {
                 return Err(trycatch_scope_to_scripterror(tc_scope, false));
             }
         }
+    }
+
+    /// Runs JavaScript code
+    pub fn run(&mut self, source: &str) -> Result<(), ScriptError> {
+        self.eval_expression(source)?;
+        Ok(())
     }
 }

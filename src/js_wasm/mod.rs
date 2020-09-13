@@ -13,12 +13,16 @@ extern "C" {
     fn message(this: &Error) -> String;
 
     type JSScriptingEnvironment;
+    type CompiledFunction;
 
     #[wasm_bindgen(constructor)]
     fn new() -> JSScriptingEnvironment;
 
     #[wasm_bindgen(method, catch)]
-    fn eval(this: &JSScriptingEnvironment, s: &str) -> Result<JsValue, Error>;
+    fn compile(his: &JSScriptingEnvironment, s: &str) -> Result<CompiledFunction, Error>;
+
+    #[wasm_bindgen(method, catch)]
+    fn run(this: &JSScriptingEnvironment, fun: &CompiledFunction) -> Result<JsValue, Error>;
 }
 
 static JS_BOOTSTRAP: Once = Once::new();
@@ -64,7 +68,11 @@ fn jsvalue_to_scriptvalue(value: JsValue) -> Result<ScriptValue, ScriptError> {
     })
 }
 
-fn jsvalue_to_scripterror(error: Error) -> ScriptError {
+fn jsvalue_to_script_compile_error(error: Error) -> ScriptError {
+    ScriptError::CompileError(error.message())
+}
+
+fn jsvalue_to_script_runtime_error(error: Error) -> ScriptError {
     ScriptError::RuntimeError(error.message())
 }
 
@@ -77,11 +85,25 @@ impl ScriptingEnvironment {
         ScriptingEnvironment(JSScriptingEnvironment::new())
     }
 
-    /// Evaluates some JS in the host
-    pub fn eval(&mut self, source: &str) -> Result<ScriptValue, ScriptError> {
-        match self.0.eval(source) {
+    fn internal_eval(&mut self, source: &str) -> Result<ScriptValue, ScriptError> {
+        let func = self
+            .0
+            .compile(source)
+            .map_err(|e| jsvalue_to_script_compile_error(e))?;
+        match self.0.run(&func) {
             Ok(value) => jsvalue_to_scriptvalue(value),
-            Err(value) => Err(jsvalue_to_scripterror(value)),
+            Err(value) => Err(jsvalue_to_script_runtime_error(value)),
         }
+    }
+
+    /// Evaluates a single JS expression
+    pub fn eval_expression(&mut self, source: &str) -> Result<ScriptValue, ScriptError> {
+        self.internal_eval(&format!("return {}", source))
+    }
+
+    /// Runs JavaScript code
+    pub fn run(&mut self, source: &str) -> Result<(), ScriptError> {
+        self.internal_eval(source)?;
+        Ok(())
     }
 }
