@@ -1,5 +1,5 @@
 use crate::core::{error::ScriptError, value::ScriptValue};
-use std::sync::Once;
+use std::{cell::RefCell, rc::Rc, sync::Once};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -96,12 +96,20 @@ impl ScriptingEnvironment {
         ScriptingEnvironment(JSScriptingEnvironment::new())
     }
 
-    pub fn register_fn(&mut self, name: &str, mut func: impl FnMut() + 'static) {
-        let closure = Box::new(move || {
-            func();
-        }) as Box<dyn FnMut()>;
-        self.0
-            .add_to_global(name, Closure::wrap(closure).into_js_value());
+    pub fn register_fn0(&mut self, name: &str, mut func: impl FnMut() -> ScriptValue + 'static) {
+        let closure = move || scriptvalue_to_jsvalue(func());
+        let closure = Closure::wrap(Box::new(closure) as Box<dyn FnMut() -> JsValue>);
+        self.0.add_to_global(name, closure.into_js_value());
+    }
+
+    pub fn register_fn1(
+        &mut self,
+        name: &str,
+        mut func: impl FnMut(ScriptValue) -> ScriptValue + 'static,
+    ) {
+        let closure = move |v1| scriptvalue_to_jsvalue(func(jsvalue_to_scriptvalue(v1).unwrap()));
+        let closure = Closure::wrap(Box::new(closure) as Box<dyn FnMut(JsValue) -> JsValue>);
+        self.0.add_to_global(name, closure.into_js_value());
     }
 
     fn internal_eval(&mut self, source: &str) -> Result<ScriptValue, ScriptError> {
