@@ -1,6 +1,7 @@
 use crate::core::{error::ScriptError, value::ScriptValue};
 use rusty_v8 as v8;
 use std::sync::Once;
+use v8::MapFnTo;
 
 static PLATFORM_INIT: Once = Once::new();
 
@@ -119,6 +120,29 @@ impl ScriptingEnvironment {
                 return Err(trycatch_scope_to_scripterror(tc_scope, false));
             }
         }
+    }
+
+    pub fn register_fn0(&mut self, name: &str, mut func: impl FnMut() -> ScriptValue + 'static) {
+        let scope = &mut v8::HandleScope::with_context(&mut self.isolate, &self.global_context);
+        let name = v8::String::new(scope, name).unwrap();
+        let closure = move |scope: &mut v8::HandleScope,
+                            args: v8::FunctionCallbackArguments,
+                            rv: v8::ReturnValue| {
+            let scriptVal = func();
+        };
+        let function = v8::FunctionTemplate::new(scope, closure);
+        let function = function.get_function(scope).unwrap();
+        self.global_context
+            .get(scope)
+            .global(scope)
+            .set(scope, name.into(), function.into());
+    }
+
+    pub fn register_fn1(
+        &mut self,
+        name: &str,
+        mut func: impl FnMut(ScriptValue) -> ScriptValue + 'static,
+    ) {
     }
 
     /// Runs JavaScript code
