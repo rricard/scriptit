@@ -1,5 +1,5 @@
 use crate::core::{error::ScriptError, value::ScriptValue};
-use std::{cell::RefCell, rc::Rc, sync::Once};
+use std::sync::Once;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
