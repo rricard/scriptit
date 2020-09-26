@@ -93,6 +93,7 @@ impl ScriptingEnvironment {
             global_context,
         };
         se.run(include_str!("./v8_bootstrap.js")).unwrap();
+        se.run(include_str!("../js/shared_bootstrap.js")).unwrap();
         se
     }
 
@@ -123,7 +124,10 @@ impl ScriptingEnvironment {
 
     /// Runs JavaScript code
     pub fn run(&mut self, source: &str) -> Result<(), ScriptError> {
-        self.eval_expression(source)?;
-        Ok(())
+        match self.eval_expression(source) {
+            Err(ScriptError::CastError { .. }) => Ok(()),
+            Err(e) => Err(e),
+            Ok(_) => Ok(()),
+        }
     }
 }

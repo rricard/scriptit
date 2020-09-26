@@ -22,9 +22,18 @@ extern "C" {
 }
 
 fn js_bootstrap() -> BootstrapResult {
-    bootstrap_eval(include_str!("./wasm_bootstrap.js"))
+    let wasm_bootstrap_res = bootstrap_eval(include_str!("./wasm_bootstrap.js"))
         .map_err(|e| e.message())
-        .unwrap()
+        .unwrap();
+    let shared_bootstrap_src = wasm_bootstrap_res
+        .compile(include_str!("../js/shared_bootstrap.js"))
+        .map_err(|e| e.message())
+        .unwrap();
+    wasm_bootstrap_res
+        .run(&shared_bootstrap_src)
+        .map_err(|e| e.message())
+        .unwrap();
+    wasm_bootstrap_res
 }
 
 fn jsvalue_to_scriptvalue(value: JsValue) -> Result<ScriptValue, ScriptError> {

@@ -1,0 +1,16 @@
+// @ts-check
+
+/**
+ * Calls synchronously a rust primtive handler
+ * @param {string} handler Name of the primitive handler
+ * @param {Uint8Array} data Bytes to send to the primitive handler
+ * @returns {Uint8Array} Bytes received from the primitive handler
+ */
+function callToRust(handler, data) {
+    // Placeholder function that will be replaced by Rust
+    return data;
+}
+
+ScriptIt.core = {
+    callToRust,
+};
