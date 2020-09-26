@@ -18,11 +18,3 @@ fn ensure_no_console() {
     let val = s_env.eval_expression("console").unwrap();
     assert_eq!(val, ScriptValue::Undefined);
 }
-
-#[test]
-#[wasm_bindgen_test]
-fn ensure_no_js_scripting_environment() {
-    let mut s_env = ScriptingEnvironment::new();
-    let val = s_env.eval_expression("JSScriptingEnvironment").unwrap();
-    assert_eq!(val, ScriptValue::Undefined);
-}
