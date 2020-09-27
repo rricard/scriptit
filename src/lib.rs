@@ -8,9 +8,12 @@
 //! ## Example
 //!
 //! ```
-//! use scriptit::{ core::value::ScriptValue, ScriptingEnvironment };
+//! use scriptit::{
+//!     core::{ value::ScriptValue, ScriptingEnvironment },
+//!     platform::PlatformScriptingEnvironment,
+//! };
 //!
-//! let mut s_env = ScriptingEnvironment::new();
+//! let mut s_env = PlatformScriptingEnvironment::new();
 //!
 //! let src = "(function() {
 //!     const greeter = 'JS';
@@ -26,10 +29,8 @@ pub mod core;
 
 #[cfg(not(target_arch = "wasm32"))]
 #[path = "js_v8/mod.rs"]
-mod backend;
+pub mod platform;
 
 #[cfg(target_arch = "wasm32")]
 #[path = "js_wasm/mod.rs"]
-mod backend;
-
-pub use backend::ScriptingEnvironment;
+pub mod platform;

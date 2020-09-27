@@ -1,2 +1,2 @@
 globalThis.console = undefined;
-globalThis.JSScriptingEnvironment = undefined;
+globalThis.ScriptIt = {};
