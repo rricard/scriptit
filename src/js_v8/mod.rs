@@ -1,6 +1,6 @@
 use crate::core::{error::ScriptError, value::ScriptValue, ScriptingEnvironment};
 use rusty_v8 as v8;
-use std::sync::Once;
+use std::{collections::HashMap, sync::Once};
 
 static PLATFORM_INIT: Once = Once::new();
 
@@ -71,6 +71,36 @@ fn val_to_scriptvalue(
     })
 }
 
+struct V8ScriptingState {
+    handlers: HashMap<String, Box<dyn FnMut(&str) -> String>>,
+}
+
+fn core_call_to_rust_receiver(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut rv: v8::ReturnValue,
+) {
+    assert_eq!(args.length(), 2);
+    let handler_name = args
+        .get(0)
+        .to_string(scope)
+        .unwrap()
+        .to_rust_string_lossy(scope);
+    let handler_data = args
+        .get(1)
+        .to_string(scope)
+        .unwrap()
+        .to_rust_string_lossy(scope);
+    let handler_result = {
+        let mut state = scope.get_slot_mut::<V8ScriptingState>().unwrap();
+        let handler_closure = state.handlers.get_mut(&handler_name).unwrap();
+        let handler_result = handler_closure(&handler_data);
+        handler_result
+    };
+    let handler_result = v8::String::new(scope, &handler_result).unwrap();
+    rv.set(handler_result.into());
+}
+
 /// A V8 scripting environment. This API also exists on WASM but JS will execute insecurely there.
 pub struct V8ScriptingEnvironment {
     isolate: v8::OwnedIsolate,
@@ -83,18 +113,51 @@ impl V8ScriptingEnvironment {
         let mut isolate = v8::Isolate::new(Default::default());
         let global_context;
         {
+            // Create Scope & Context and associate them to global_context
             let scope = &mut v8::HandleScope::new(&mut isolate);
             let context = v8::Context::new(scope);
-            // TODO: initialize the context here with our bindings
+            let scope = &mut v8::ContextScope::new(scope, context);
             global_context = v8::Global::new(scope, context);
-        }
-        let mut se = V8ScriptingEnvironment {
+
+            // Run the bootstrap scripts
+            let bs_src = format!(
+                "{}\n{}",
+                include_str!("./v8_bootstrap.js"),
+                include_str!("../js/shared_bootstrap.js")
+            );
+            let bs_src = v8::String::new(scope, &bs_src).unwrap();
+            let bs_script = v8::Script::compile(scope, bs_src, None).unwrap();
+            bs_script.run(scope).unwrap();
+
+            // Go set ScriptIt.core.callToRust to core_call_to_rust_receiver
+            let scriptit_str = v8::String::new(scope, "ScriptIt").unwrap();
+            let core_str = v8::String::new(scope, "core").unwrap();
+            let call_to_rust_str = v8::String::new(scope, "callToRust").unwrap();
+            let call_to_rust_fn = v8::FunctionTemplate::new(scope, core_call_to_rust_receiver);
+            let call_to_rust_fn = call_to_rust_fn.get_function(scope).unwrap();
+            global_context
+                .get(scope)
+                .global(scope)
+                .get(scope, scriptit_str.into())
+                .unwrap()
+                .to_object(scope)
+                .unwrap()
+                .get(scope, core_str.into())
+                .unwrap()
+                .to_object(scope)
+                .unwrap()
+                .set(scope, call_to_rust_str.into(), call_to_rust_fn.into());
+        };
+
+        // Initialize scripting state
+        isolate.set_slot::<V8ScriptingState>(V8ScriptingState {
+            handlers: HashMap::new(),
+        });
+
+        V8ScriptingEnvironment {
             isolate,
             global_context,
-        };
-        se.run(include_str!("./v8_bootstrap.js")).unwrap();
-        se.run(include_str!("../js/shared_bootstrap.js")).unwrap();
-        se
+        }
     }
 }
 
@@ -129,6 +192,19 @@ impl ScriptingEnvironment for V8ScriptingEnvironment {
             Err(e) => Err(e),
             Ok(_) => Ok(()),
         }
+    }
+
+    fn register_core_handler(
+        &mut self,
+        handler_name: &str,
+        handler_closure: Box<dyn FnMut(&str) -> String>,
+    ) {
+        let scope = &mut v8::HandleScope::with_context(&mut self.isolate, &self.global_context);
+        scope
+            .get_slot_mut::<V8ScriptingState>()
+            .unwrap()
+            .handlers
+            .insert(handler_name.to_string(), handler_closure);
     }
 }
 

@@ -13,4 +13,10 @@ pub trait ScriptingEnvironment {
     fn eval_expression(&mut self, source: &str) -> Result<ScriptValue, ScriptError>;
     /// Runs JavaScript code
     fn run(&mut self, source: &str) -> Result<(), ScriptError>;
+    /// Registers a low-level handler
+    fn register_core_handler(
+        &mut self,
+        handler_name: &str,
+        handler_closure: Box<dyn FnMut(&str) -> String>,
+    );
 }
