@@ -108,8 +108,16 @@
         return compiledFunction(sandboxProxy);
     }
 
+    /**
+     * @param {(handler: string, data: string) => string} callToRust
+     */
+    function setCallToRust(callToRust) {
+        sandbox.ScriptIt.core.callToRust = callToRust;
+    }
+
     return {
         compile,
         run,
+        setCallToRust,
     };
 })();
