@@ -1,4 +1,4 @@
-use crate::core::{error::ScriptError, value::ScriptValue};
+use crate::core::{error::ScriptError, value::ScriptValue, ScriptingEnvironment};
 use rusty_v8 as v8;
 use std::sync::Once;
 
@@ -72,13 +72,13 @@ fn val_to_scriptvalue(
 }
 
 /// A V8 scripting environment. This API also exists on WASM but JS will execute insecurely there.
-pub struct ScriptingEnvironment {
+pub struct V8ScriptingEnvironment {
     isolate: v8::OwnedIsolate,
     global_context: v8::Global<v8::Context>,
 }
 
-impl ScriptingEnvironment {
-    pub fn new() -> ScriptingEnvironment {
+impl V8ScriptingEnvironment {
+    pub fn new() -> V8ScriptingEnvironment {
         ensure_platform_init();
         let mut isolate = v8::Isolate::new(Default::default());
         let global_context;
@@ -88,7 +88,7 @@ impl ScriptingEnvironment {
             // TODO: initialize the context here with our bindings
             global_context = v8::Global::new(scope, context);
         }
-        let mut se = ScriptingEnvironment {
+        let mut se = V8ScriptingEnvironment {
             isolate,
             global_context,
         };
@@ -96,9 +96,10 @@ impl ScriptingEnvironment {
         se.run(include_str!("../js/shared_bootstrap.js")).unwrap();
         se
     }
+}
 
-    /// Evaluates a single JS expression
-    pub fn eval_expression(&mut self, source: &str) -> Result<ScriptValue, ScriptError> {
+impl ScriptingEnvironment for V8ScriptingEnvironment {
+    fn eval_expression(&mut self, source: &str) -> Result<ScriptValue, ScriptError> {
         let scope = &mut v8::HandleScope::with_context(&mut self.isolate, &self.global_context);
         let source = v8::String::new(scope, source).ok_or(ScriptError::CastError {
             type_from: "&str",
@@ -122,8 +123,7 @@ impl ScriptingEnvironment {
         }
     }
 
-    /// Runs JavaScript code
-    pub fn run(&mut self, source: &str) -> Result<(), ScriptError> {
+    fn run(&mut self, source: &str) -> Result<(), ScriptError> {
         match self.eval_expression(source) {
             Err(ScriptError::CastError { .. }) => Ok(()),
             Err(e) => Err(e),
@@ -131,3 +131,5 @@ impl ScriptingEnvironment {
         }
     }
 }
+
+pub type PlatformScriptingEnvironment = V8ScriptingEnvironment;

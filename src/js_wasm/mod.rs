@@ -1,4 +1,4 @@
-use crate::core::{error::ScriptError, value::ScriptValue};
+use crate::core::{error::ScriptError, value::ScriptValue, ScriptingEnvironment};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -77,12 +77,11 @@ fn jsvalue_to_script_runtime_error(error: Error) -> ScriptError {
     ScriptError::RuntimeError(error.message())
 }
 
-/// A mocked environment that just proxies to the host
-pub struct ScriptingEnvironment(BootstrapResult);
+pub struct WASMScriptingEnvironment(BootstrapResult);
 
-impl ScriptingEnvironment {
-    pub fn new() -> ScriptingEnvironment {
-        ScriptingEnvironment(js_bootstrap())
+impl WASMScriptingEnvironment {
+    pub fn new() -> WASMScriptingEnvironment {
+        WASMScriptingEnvironment(js_bootstrap())
     }
 
     fn internal_eval(&mut self, source: &str) -> Result<ScriptValue, ScriptError> {
@@ -95,15 +94,19 @@ impl ScriptingEnvironment {
             Err(value) => Err(jsvalue_to_script_runtime_error(value)),
         }
     }
+}
 
+impl ScriptingEnvironment for WASMScriptingEnvironment {
     /// Evaluates a single JS expression
-    pub fn eval_expression(&mut self, source: &str) -> Result<ScriptValue, ScriptError> {
+    fn eval_expression(&mut self, source: &str) -> Result<ScriptValue, ScriptError> {
         self.internal_eval(&format!("return {}", source))
     }
 
     /// Runs JavaScript code
-    pub fn run(&mut self, source: &str) -> Result<(), ScriptError> {
+    fn run(&mut self, source: &str) -> Result<(), ScriptError> {
         self.internal_eval(source)?;
         Ok(())
     }
 }
+
+pub type PlatformScriptingEnvironment = WASMScriptingEnvironment;

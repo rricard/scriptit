@@ -21,20 +21,7 @@ Due to those goals, scriptit will not give you the same amount of control that y
 
 ## Example
 
-```rust
-use scriptit::{ core::value::ScriptValue, ScriptingEnvironment };
-
-let mut s_env = ScriptingEnvironment::new();
-
-let src = "
-    const greeter = 'JS';
-    const greeted = 'Rust';
-    `Hello ${greeted}! (from ${greeter}...)`
-";
-let res = s_env.eval(src).unwrap();
-
-assert_eq!(res, ScriptValue::String("Hello Rust! (from JS...)".to_string()));
-```
+See the documentation for an example.
 
 ## Roadmap
 
