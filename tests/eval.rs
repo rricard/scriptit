@@ -1,5 +1,9 @@
 use scriptit::{
-    core::{error::ScriptError, value::ScriptValue, ScriptingEnvironment},
+    core::{
+        error::ScriptError,
+        value::{ScriptNumber, ScriptValue},
+        ScriptingEnvironment,
+    },
     platform::PlatformScriptingEnvironment,
 };
 use wasm_bindgen_test::*;
@@ -29,9 +33,9 @@ fn trigger_runtime_error() {
 fn get_boolean_value() {
     let mut s_env = PlatformScriptingEnvironment::new();
     let val = s_env.eval_expression("true").unwrap();
-    assert_eq!(val, ScriptValue::Boolean(true));
+    assert_eq!(val, ScriptValue::Bool(true));
     let val = s_env.eval_expression("false").unwrap();
-    assert_eq!(val, ScriptValue::Boolean(false));
+    assert_eq!(val, ScriptValue::Bool(false));
 }
 
 #[test]
@@ -49,14 +53,9 @@ fn get_string_value() {
 fn get_number_value() {
     let mut s_env = PlatformScriptingEnvironment::new();
     let val = s_env.eval_expression("123").unwrap();
-    assert_eq!(val, ScriptValue::Number(123.0));
+    assert_eq!(val, ScriptValue::Number(ScriptNumber::from(123)));
     let val = s_env.eval_expression("12 + 3 ").unwrap();
-    assert_eq!(val, ScriptValue::Number(15.0));
-    let val = s_env.eval_expression("NaN").unwrap();
-    match val {
-        ScriptValue::Number(val) => assert!(val.is_nan()),
-        _ => panic!("Expected a ScriptValue::Number, got a  {:?}", val),
-    }
+    assert_eq!(val, ScriptValue::Number(ScriptNumber::from(15)));
 }
 
 #[test]
@@ -65,12 +64,4 @@ fn get_null_value() {
     let mut s_env = PlatformScriptingEnvironment::new();
     let val = s_env.eval_expression("null").unwrap();
     assert_eq!(val, ScriptValue::Null);
-}
-
-#[test]
-#[wasm_bindgen_test]
-fn get_undefined_value() {
-    let mut s_env = PlatformScriptingEnvironment::new();
-    let val = s_env.eval_expression("undefined").unwrap();
-    assert_eq!(val, ScriptValue::Undefined);
 }

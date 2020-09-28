@@ -41,36 +41,9 @@ fn js_bootstrap() -> BootstrapResult {
 }
 
 fn jsvalue_to_scriptvalue(value: JsValue) -> Result<ScriptValue, ScriptError> {
-    if value.is_function() || value.is_object() {
-        return Err(ScriptError::CastError {
-            type_from: "JsValue (object or function)",
-            type_to: "ScriptValue",
-        });
-    }
-    if value.is_string() {
-        let value = value.as_string().ok_or(ScriptError::CastError {
-            type_from: "JsValue",
-            type_to: "String",
-        })?;
-        return Ok(ScriptValue::String(value));
-    }
-    if value.is_null() {
-        return Ok(ScriptValue::Null);
-    }
-    if value.is_undefined() {
-        return Ok(ScriptValue::Undefined);
-    }
-    if let Some(value) = value.as_f64() {
-        return Ok(ScriptValue::Number(value));
-    }
-    if let Some(value) = value.as_bool() {
-        return Ok(ScriptValue::Boolean(value));
-    }
-
-    Err(ScriptError::CastError {
-        type_from: "JsValue",
-        type_to: "ScriptValue",
-    })
+    value
+        .into_serde()
+        .map_err(|e| ScriptError::SerializationError(e.to_string()))
 }
 
 fn jsvalue_to_script_compile_error(error: Error) -> ScriptError {

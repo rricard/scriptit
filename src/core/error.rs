@@ -6,6 +6,8 @@ pub enum ScriptError {
         type_from: &'static str,
         type_to: &'static str,
     },
+    /// Serialization error, usually comes from serde_json: when something is not JSON-serializable
+    SerializationError(String),
     /// Error that happens during the compile phase (**V8-only**)
     CompileError(String),
     /// Error that happens while running the code
@@ -20,6 +22,9 @@ impl std::fmt::Display for ScriptError {
                 "ScriptError::CastError: Casting from `{}` to `{}` failed!",
                 type_from, type_to
             ),
+            ScriptError::SerializationError(msg) => {
+                write!(f, "ScriptError::SerializationError: {}", msg)
+            }
             ScriptError::CompileError(msg) => write!(f, "ScriptError::CompileError: {}", msg),
             ScriptError::RuntimeError(msg) => write!(f, "ScriptError::RuntimeError: {}", msg),
         }
