@@ -41,34 +41,13 @@ fn val_to_scriptvalue(
     scope: &mut v8::HandleScope,
     value: &v8::Local<v8::Value>,
 ) -> Result<ScriptValue, ScriptError> {
-    if value.is_boolean() {
-        return Ok(ScriptValue::Boolean(value.boolean_value(scope)));
-    }
-    if value.is_string() {
-        let value = value.to_string(scope).ok_or(ScriptError::CastError {
-            type_from: "v8::Value",
-            type_to: "v8::String",
-        })?;
-        return Ok(ScriptValue::String(value.to_rust_string_lossy(scope)));
-    }
-    if value.is_number() {
-        let value = value.number_value(scope).ok_or(ScriptError::CastError {
-            type_from: "v8::Value",
-            type_to: "f64",
-        })?;
-        return Ok(ScriptValue::Number(value));
-    }
-    if value.is_null() {
-        return Ok(ScriptValue::Null);
-    }
-    if value.is_undefined() {
-        return Ok(ScriptValue::Undefined);
-    }
-
-    Err(ScriptError::CastError {
-        type_from: "v8::Value (probably object)",
-        type_to: "ScriptValue",
-    })
+    let value = value.to_string(scope).ok_or(ScriptError::CastError {
+        type_from: "v8::Value",
+        type_to: "v8::String",
+    })?;
+    let json_str = value.to_rust_string_lossy(scope);
+    Ok(serde_json::from_str(&json_str)
+        .map_err(|e| ScriptError::SerializationError(e.to_string()))?)
 }
 
 struct V8ScriptingState {
@@ -163,8 +142,9 @@ impl V8ScriptingEnvironment {
 
 impl ScriptingEnvironment for V8ScriptingEnvironment {
     fn eval_expression(&mut self, source: &str) -> Result<ScriptValue, ScriptError> {
+        let source = format!("JSON.stringify({})", source);
         let scope = &mut v8::HandleScope::with_context(&mut self.isolate, &self.global_context);
-        let source = v8::String::new(scope, source).ok_or(ScriptError::CastError {
+        let source = v8::String::new(scope, &source).ok_or(ScriptError::CastError {
             type_from: "&str",
             type_to: "v8::String",
         })?;

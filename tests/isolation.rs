@@ -18,6 +18,8 @@ fn ensure_no_global_prototype_leakage() {
 #[wasm_bindgen_test]
 fn ensure_no_console() {
     let mut s_env = PlatformScriptingEnvironment::new();
-    let val = s_env.eval_expression("console").unwrap();
-    assert_eq!(val, ScriptValue::Undefined);
+    match s_env.eval_expression("console || null") {
+        Ok(ScriptValue::Null) => {}
+        other => panic!("Expected an error or a null, got {:?}", other),
+    }
 }
