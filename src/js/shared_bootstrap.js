@@ -11,6 +11,22 @@ function callToRust(handler, data) {
     return data;
 }
 
+/**
+ * Create and attach a function bound to `ScriptIt.funcs`
+ * @param {string} funcName Name of the function to attach
+ * @param {string} handler Name of the `callToRust` handler
+ */
+function registerFunc(funcName, handler) {
+    ScriptIt.funcs[funcName] = (...args) => {
+        const data = JSON.stringify(args);
+        const res = ScriptIt.core.callToRust(handler, data);
+        return JSON.parse(res);
+    };
+}
+
 ScriptIt.core = {
     callToRust,
+    registerFunc,
 };
+
+ScriptIt.funcs = {};
