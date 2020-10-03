@@ -9,6 +9,8 @@ scriptit will run your JS differently depending on your platform:
 -   Run in a V8 interpreter for "native" targets
 -   Run in the WASM host interpreter for "wasm32" targets
 
+You can call rust functions from JS.
+
 ### Why?
 
 I wanted to be able to do scripting in my rust applications, I do not need a fully-fledged embedding of v8 like node or deno and the only use here is as a library, so you get to choose what to inject.
@@ -27,8 +29,10 @@ See the documentation for an example.
 
 scriptit is extremely experimental, I wouldn't use it for anything now, at least not before the following is done:
 
--   Serializing/Deserializing complex structures to and from js through serde, probably...
--   Add the ability to inject Rust functions to the global object to enable calls to rust from JS
 -   ES Modules support
+-   Event-loop support
+-   Promises/Futures support
+-   Events from rust support
+-   Passing to functions by reference instead of a serialized JSON copy
 
 See [the issues](https://github.com/rricard/scriptit/issues) for more details.

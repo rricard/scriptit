@@ -15,10 +15,15 @@
 //!
 //! let mut s_env = PlatformScriptingEnvironment::new();
 //!
+//! s_env.register_func("greet", Box::new(|args| {
+//!     let name = args.get(0).unwrap().as_str().unwrap();
+//!     return ScriptValue::String(format!("Hello {}!", name));
+//! }));
+//!
 //! let src = "(function() {
 //!     const greeter = 'JS';
 //!     const greeted = 'Rust';
-//!     return `Hello ${greeted}! (from ${greeter}...)`;
+//!     return `${ScriptIt.funcs.greet(greeted)} (from ${greeter}...)`;
 //! })()";
 //! let res = s_env.eval_expression(src).unwrap();
 //!
