@@ -17,22 +17,25 @@ pub trait ScriptingEnvironment {
     fn register_core_handler(
         &mut self,
         handler_name: &str,
-        handler_closure: Box<dyn FnMut(&str) -> String>,
+        handler_closure: Box<dyn FnMut(&str) -> Result<String, String>>,
     );
     /// Registers a function call
     fn register_func(
         &mut self,
         func_name: &str,
-        mut handler_closure: Box<dyn FnMut(&Vec<ScriptValue>) -> ScriptValue>,
+        mut handler_closure: Box<dyn FnMut(&Vec<ScriptValue>) -> Result<ScriptValue, ScriptError>>,
     ) {
         let core_handler_name = format!("func${}${}", func_name, uuid::Uuid::new_v4());
         self.register_core_handler(
             &core_handler_name,
             Box::new(move |data_str: &str| {
-                let args: ScriptValue = serde_json::from_str(data_str).unwrap();
-                let args = args.as_array().unwrap();
-                let res = handler_closure(&args);
-                return res.to_string();
+                let args: ScriptValue =
+                    serde_json::from_str(data_str).map_err(|err| err.to_string())?;
+                let args = args
+                    .as_array()
+                    .ok_or("Couldn't convert args to array of values to pass in rust")?;
+                let res = handler_closure(&args).map_err(|err| err.to_string())?;
+                return Ok(res.to_string());
             }),
         );
         let src = format!(

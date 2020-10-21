@@ -65,3 +65,20 @@ fn get_null_value() {
     let val = s_env.eval_expression("null").unwrap();
     assert_eq!(val, ScriptValue::Null);
 }
+
+#[test]
+#[wasm_bindgen_test]
+fn multi_statement_run() {
+    let mut s_env = PlatformScriptingEnvironment::new();
+    s_env.run("1 + 1; null;").unwrap();
+}
+
+#[test]
+#[wasm_bindgen_test]
+fn multi_statement_fail() {
+    let mut s_env = PlatformScriptingEnvironment::new();
+    match s_env.run("1 + 1; null; iDontExist();") {
+        Err(ScriptError::RuntimeError(_)) => {}
+        other => panic!("Expected a ScriptError::RuntimeError got {:?}", other),
+    }
+}

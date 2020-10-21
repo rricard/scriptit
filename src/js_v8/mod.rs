@@ -51,33 +51,54 @@ fn val_to_scriptvalue(
 }
 
 struct V8ScriptingState {
-    handlers: HashMap<String, Box<dyn FnMut(&str) -> String>>,
+    handlers: HashMap<String, Box<dyn FnMut(&str) -> Result<String, String>>>,
+}
+
+fn internal_core_call_to_rust_receiver(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut rv: v8::ReturnValue,
+) -> Result<(), String> {
+    assert_eq!(args.length(), 2);
+    let handler_name = args
+        .get(0)
+        .to_string(scope)
+        .ok_or("Can't get first argument as string")?
+        .to_rust_string_lossy(scope);
+    let handler_data = args
+        .get(1)
+        .to_string(scope)
+        .ok_or("Can't get second argument as string")?
+        .to_rust_string_lossy(scope);
+    let handler_result = {
+        let mut state = scope
+            .get_slot_mut::<V8ScriptingState>()
+            .ok_or("Can't acquire V8ScriptingState")?;
+        let handler_closure = state
+            .handlers
+            .get_mut(&handler_name)
+            .ok_or(format!("Can't get unregistered handler: {}", &handler_name))?;
+        handler_closure(&handler_data)?
+    };
+    let handler_result = v8::String::new(scope, &handler_result)
+        .ok_or("Can't convert resulting value into string")?;
+    rv.set(handler_result.into());
+    Ok(())
 }
 
 fn core_call_to_rust_receiver(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
-    mut rv: v8::ReturnValue,
+    rv: v8::ReturnValue,
 ) {
-    assert_eq!(args.length(), 2);
-    let handler_name = args
-        .get(0)
-        .to_string(scope)
-        .unwrap()
-        .to_rust_string_lossy(scope);
-    let handler_data = args
-        .get(1)
-        .to_string(scope)
-        .unwrap()
-        .to_rust_string_lossy(scope);
-    let handler_result = {
-        let mut state = scope.get_slot_mut::<V8ScriptingState>().unwrap();
-        let handler_closure = state.handlers.get_mut(&handler_name).unwrap();
-        let handler_result = handler_closure(&handler_data);
-        handler_result
-    };
-    let handler_result = v8::String::new(scope, &handler_result).unwrap();
-    rv.set(handler_result.into());
+    match internal_core_call_to_rust_receiver(scope, args, rv) {
+        Err(err_str) => {
+            let err_str = v8::String::new(scope, &err_str).unwrap();
+            let exception = v8::Exception::error(scope, err_str);
+            scope.throw_exception(exception);
+        }
+        Ok(_) => {}
+    }
 }
 
 /// A V8 scripting environment. This API also exists on WASM but JS will execute insecurely there.
@@ -167,17 +188,33 @@ impl ScriptingEnvironment for V8ScriptingEnvironment {
     }
 
     fn run(&mut self, source: &str) -> Result<(), ScriptError> {
-        match self.eval_expression(source) {
-            Err(ScriptError::CastError { .. }) => Ok(()),
-            Err(e) => Err(e),
-            Ok(_) => Ok(()),
+        let scope = &mut v8::HandleScope::with_context(&mut self.isolate, &self.global_context);
+        let source = v8::String::new(scope, &source).ok_or(ScriptError::CastError {
+            type_from: "&str",
+            type_to: "v8::String",
+        })?;
+
+        let tc_scope = &mut v8::TryCatch::new(scope);
+
+        let script = match v8::Script::compile(tc_scope, source, None) {
+            Some(script) => script,
+            None => {
+                return Err(trycatch_scope_to_scripterror(tc_scope, true));
+            }
+        };
+
+        match script.run(tc_scope) {
+            Some(_) => Ok(()),
+            None => {
+                return Err(trycatch_scope_to_scripterror(tc_scope, false));
+            }
         }
     }
 
     fn register_core_handler(
         &mut self,
         handler_name: &str,
-        handler_closure: Box<dyn FnMut(&str) -> String>,
+        handler_closure: Box<dyn FnMut(&str) -> Result<String, String>>,
     ) {
         let scope = &mut v8::HandleScope::with_context(&mut self.isolate, &self.global_context);
         scope

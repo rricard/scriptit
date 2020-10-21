@@ -8,6 +8,8 @@ extern "C" {
     fn bootstrap_eval(s: &str) -> Result<BootstrapResult, Error>;
 
     type Error;
+    #[wasm_bindgen(constructor)]
+    fn new(message: &str) -> Error;
 
     #[wasm_bindgen(method, getter)]
     fn message(this: &Error) -> String;
@@ -16,7 +18,7 @@ extern "C" {
     type CompiledFunction;
 
     #[wasm_bindgen(method, catch)]
-    fn compile(his: &BootstrapResult, s: &str) -> Result<CompiledFunction, Error>;
+    fn compile(this: &BootstrapResult, s: &str) -> Result<CompiledFunction, Error>;
 
     #[wasm_bindgen(method, catch)]
     fn run(this: &BootstrapResult, fun: &CompiledFunction) -> Result<JsValue, Error>;
@@ -56,7 +58,7 @@ fn jsvalue_to_script_runtime_error(error: Error) -> ScriptError {
 
 pub struct WASMScriptingEnvironment {
     bootstrapped: BootstrapResult,
-    handlers: Rc<RefCell<HashMap<String, Box<dyn FnMut(&str) -> String>>>>,
+    handlers: Rc<RefCell<HashMap<String, Box<dyn FnMut(&str) -> Result<String, String>>>>>,
 }
 
 impl WASMScriptingEnvironment {
@@ -71,13 +73,21 @@ impl WASMScriptingEnvironment {
         let closure = Closure::wrap(Box::new(move |handler_name: JsValue, data: JsValue| {
             if let (Some(handler_name), Some(data)) = (handler_name.as_string(), data.as_string()) {
                 let mut handlers = closure_handlers.borrow_mut();
-                let handler_closure = handlers.get_mut(&handler_name).unwrap();
+                let unreg_handler_err = Error::new(&format!(
+                    "Can't get unregistered handler: {}",
+                    &handler_name
+                ));
+                let handler_closure = handlers.get_mut(&handler_name).ok_or(unreg_handler_err)?;
                 let handler_result = handler_closure(&data);
-                JsValue::from_str(&handler_result)
+                match handler_result {
+                    Ok(str) => Ok(JsValue::from_str(&str)),
+                    Err(err_str) => Err(Error::new(&err_str).into()),
+                }
             } else {
-                panic!("Passed non-string values to ScriptIt.core.callToRust")
+                Err(Error::new("Passed non-string values to ScriptIt.core.callToRust").into())
             }
-        }) as Box<dyn FnMut(JsValue, JsValue) -> JsValue>);
+        })
+            as Box<dyn FnMut(JsValue, JsValue) -> Result<JsValue, JsValue>>);
 
         wse.bootstrapped.set_call_to_rust(closure.into_js_value());
 
@@ -111,7 +121,7 @@ impl ScriptingEnvironment for WASMScriptingEnvironment {
     fn register_core_handler(
         &mut self,
         handler_name: &str,
-        handler_closure: Box<dyn FnMut(&str) -> String>,
+        handler_closure: Box<dyn FnMut(&str) -> Result<String, String>>,
     ) {
         self.handlers
             .borrow_mut()
