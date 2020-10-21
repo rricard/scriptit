@@ -167,10 +167,26 @@ impl ScriptingEnvironment for V8ScriptingEnvironment {
     }
 
     fn run(&mut self, source: &str) -> Result<(), ScriptError> {
-        match self.eval_expression(source) {
-            Err(ScriptError::CastError { .. }) => Ok(()),
-            Err(e) => Err(e),
-            Ok(_) => Ok(()),
+        let scope = &mut v8::HandleScope::with_context(&mut self.isolate, &self.global_context);
+        let source = v8::String::new(scope, &source).ok_or(ScriptError::CastError {
+            type_from: "&str",
+            type_to: "v8::String",
+        })?;
+
+        let tc_scope = &mut v8::TryCatch::new(scope);
+
+        let script = match v8::Script::compile(tc_scope, source, None) {
+            Some(script) => script,
+            None => {
+                return Err(trycatch_scope_to_scripterror(tc_scope, true));
+            }
+        };
+
+        match script.run(tc_scope) {
+            Some(_) => Ok(()),
+            None => {
+                return Err(trycatch_scope_to_scripterror(tc_scope, false));
+            }
         }
     }
 
