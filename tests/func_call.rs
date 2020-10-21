@@ -20,7 +20,7 @@ fn register_count_handler() {
         Box::new(move |_| {
             *closure_count.borrow_mut() += 1;
             let res = *closure_count.borrow();
-            ScriptValue::Number(ScriptNumber::from(res))
+            Ok(ScriptValue::Number(ScriptNumber::from(res)))
         }),
     );
     let val = s_env
@@ -52,7 +52,7 @@ fn register_data_and_avg_handlers() {
             let val = val.get(0).unwrap().as_f64().unwrap();
             *data_count.borrow_mut() += 1;
             *data_total.borrow_mut() += val;
-            ScriptValue::Null
+            Ok(ScriptValue::Null)
         }),
     );
 
@@ -60,7 +60,7 @@ fn register_data_and_avg_handlers() {
         "avg",
         Box::new(move |_| {
             let val = *total.borrow() / (*count.borrow() as f64);
-            ScriptValue::Number(ScriptNumber::from_f64(val).unwrap())
+            Ok(ScriptValue::Number(ScriptNumber::from_f64(val).unwrap()))
         }),
     );
 

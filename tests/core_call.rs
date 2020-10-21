@@ -1,6 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use scriptit::{
+    core::error::ScriptError,
     core::{value::ScriptValue, ScriptingEnvironment},
     platform::PlatformScriptingEnvironment,
 };
@@ -16,7 +17,7 @@ fn register_count_handler() {
         "count",
         Box::new(move |_| {
             *closure_count.borrow_mut() += 1;
-            String::from(format!("{}", *closure_count.borrow()))
+            Ok(String::from(format!("{}", *closure_count.borrow())))
         }),
     );
     let val = s_env
@@ -48,7 +49,7 @@ fn register_data_and_avg_handlers() {
             let val: f64 = val.parse().unwrap();
             *data_count.borrow_mut() += 1;
             *data_total.borrow_mut() += val;
-            "".to_string()
+            Ok("".to_string())
         }),
     );
 
@@ -56,7 +57,7 @@ fn register_data_and_avg_handlers() {
         "avg",
         Box::new(move |_| {
             let val = *total.borrow() / (*count.borrow() as f64);
-            format!("{}", val).to_string()
+            Ok(format!("{}", val).to_string())
         }),
     );
 
@@ -72,4 +73,24 @@ fn register_data_and_avg_handlers() {
         .unwrap();
 
     assert_eq!(val, ScriptValue::String("13".to_string()));
+}
+
+#[test]
+#[wasm_bindgen_test]
+fn throw_in_js_if_failure() {
+    let mut s_env = PlatformScriptingEnvironment::new();
+    match s_env.run("ScriptIt.core.callToRust('not found', 'test')") {
+        Err(ScriptError::RuntimeError(msg)) => {
+            assert!(msg.contains("Can\'t get unregistered handler: not found"));
+        }
+        other => panic!("Expected a ScriptError::RuntimeError got {:?}", other),
+    }
+
+    s_env.register_core_handler("fail", Box::new(move |_| Err("I am failing".to_string())));
+    match s_env.run("ScriptIt.core.callToRust('fail', 'test')") {
+        Err(ScriptError::RuntimeError(msg)) => {
+            assert!(msg.contains("I am failing"));
+        }
+        other => panic!("Expected a ScriptError::RuntimeError got {:?}", other),
+    }
 }

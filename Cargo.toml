@@ -1,6 +1,6 @@
 [package]
 name = "scriptit"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Robin Ricard <git@rricard.me>"]
 edition = "2018"
 description = "scriptit is a simple way to run JavaScript code in Rust (native+wasm)"

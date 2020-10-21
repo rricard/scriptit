@@ -17,7 +17,7 @@
 //!
 //! s_env.register_func("greet", Box::new(|args| {
 //!     let name = args.get(0).unwrap().as_str().unwrap();
-//!     return ScriptValue::String(format!("Hello {}!", name));
+//!     return Ok(ScriptValue::String(format!("Hello {}!", name)));
 //! }));
 //!
 //! let src = "(function() {
